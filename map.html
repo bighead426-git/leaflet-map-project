@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet 地圖範例：台北車站與我的家</title>
+    <title>Leaflet 地圖範例：載入 GPX 路線</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+
     <style>
-        /* 確保地圖尺寸設定正確 */
         #map { 
-            height: 600px; 
+            height: 800px; /* 放大地圖高度以顯示完整路線 */
             width: 100%;
         }
         body, html {
@@ -26,25 +27,46 @@
     <div id="map"></div>
 
     <script>
+        // 設定地圖中心點和縮放層級 (先設定在台灣北部，等待 GPX 載入後會自動縮放)
         var taipeiCenter = [25.0477, 121.5170];
-        var zoomLevel = 15;
+        var zoomLevel = 10;
 
-        // 初始化地圖
+        // 1. 初始化地圖
         var map = L.map('map').setView(taipeiCenter, zoomLevel);
 
-        // 加入地圖圖層 (OpenStreetMap)
+        // 2. 加入地圖圖層 (OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
-        // 放置圖釘並綁定彈出式視窗
-        var homeLocation = [25.048, 121.517];
-        L.marker(homeLocation).addTo(map)
-            .bindPopup("<b>我的家</b>")
-            .openPopup();
+        // 3. 【關鍵步驟】載入 GPX 軌跡檔案
+        // 這是 Leaflet-gpx 提供的公開範例 GPX 連結
+        // 當您找到台北大縱走的 GPX 檔案後，請替換這個 URL
+        var gpx_url = 'https://mpetazzoni.github.io/leaflet-gpx/demo.gpx'; 
+        
+        // 設定 GPX 載入選項
+        var options = {
+          async: true, // 允許非同步載入
+          marker_options: {
+              startIconUrl: null, // 隱藏預設的起點圖釘
+              endIconUrl: null,   // 隱藏預設的終點圖釘
+              shadowUrl: null
+          },
+          polyline_options: {
+            color: 'red', // 軌跡線的顏色
+            opacity: 0.8, // 透明度
+            weight: 5,    // 線條寬度
+            lineCap: 'round'
+          }
+        };
 
-        map.panTo(homeLocation);
+        // 創建 L.GPX 實例並加入地圖
+        new L.GPX(gpx_url, options).on('loaded', function(e) {
+          // 軌跡載入完成後，自動將地圖縮放至適合顯示整個軌跡的範圍
+          map.fitBounds(e.target.getBounds());
+        }).addTo(map);
+        
     </script>
 
 </body>
