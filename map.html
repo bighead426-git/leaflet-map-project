@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet 地圖範例：台北車站與我的家</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* 確保地圖尺寸設定正確 */
+        #map { 
+            height: 600px; 
+            width: 100%;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script>
+        var taipeiCenter = [25.0477, 121.5170];
+        var zoomLevel = 15;
+
+        // 初始化地圖
+        var map = L.map('map').setView(taipeiCenter, zoomLevel);
+
+        // 加入地圖圖層 (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // 放置圖釘並綁定彈出式視窗
+        var homeLocation = [25.048, 121.517];
+        L.marker(homeLocation).addTo(map)
+            .bindPopup("<b>我的家</b>")
+            .openPopup();
+
+        map.panTo(homeLocation);
+    </script>
+
+</body>
+</html>
