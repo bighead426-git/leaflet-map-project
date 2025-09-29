@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的課表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .schedule-cell {
+            min-height: 80px;
+            transition: all 0.2s ease;
+        }
+        .schedule-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .time-slot {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .subject-math {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+        .subject-english {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        .subject-science {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        .subject-history {
+            background: linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%);
+        }
+        .subject-pe {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .subject-art {
+            background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%);
+        }
+        .subject-music {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        .subject-chinese {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        .course-item {
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+        .course-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+        .course-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: #dbeafe !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- 標題 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🎓 屏科大課表</h1>
+        </div>
+
+        <!-- 課程編輯區 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">📝 課程編輯</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">課程名稱</label>
+                    <input type="text" id="courseName" placeholder="例：計算機概論" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">授課老師</label>
+                    <input type="text" id="teacherName" placeholder="例：王教授" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">上課地點</label>
+                    <input type="text" id="classroom" placeholder="例：工程館101" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="createCourse()" class="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-600 hover:to-blue-700 transition-all transform hover:scale-105">
+                    ➕ 建立課程
+                </button>
+                <button onclick="saveSchedule()" class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all transform hover:scale-105">
+                    💾 保存課表
+                </button>
+                <button onclick="loadSchedule()" class="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-2 rounded-lg hover:from-orange-600 hover:to-red-700 transition-all transform hover:scale-105">
+                    📂 載入課表
+                </button>
+                <button onclick="clearAllSchedule()" class="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-2 rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all transform hover:scale-105">
+                    🗑️ 清空課表
+                </button>
+            </div>
+            
+            <!-- 可拖曳的課程列表 -->
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">📚 課程庫 (拖曳到課表中)</h3>
+                <div id="courseBank" class="flex flex-wrap gap-3 min-h-[60px] p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div class="text-gray-500 text-sm">建立課程後會出現在這裡，可拖曳到課表中</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 課表主體 -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="grid grid-cols-6 gap-0">
+                <!-- 表頭 -->
+                <div class="time-slot text-white font-bold p-4 text-center">
+                    <div class="text-sm">時間</div>
+                </div>
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold p-4 text-center">
+                    <div class="text-sm mb-1">星期一</div>
+                    <div class="text-xs opacity-80">Monday</div>
+                </div>
+                <div class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold p-4 text-center">
+                    <div class="text-sm mb-1">星期二</div>
+                    <div class="text-xs opacity-80">Tuesday</div>
+                </div>
+                <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold p-4 text-center">
+                    <div class="text-sm mb-1">星期三</div>
+                    <div class="text-xs opacity-80">Wednesday</div>
+                </div>
+                <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold p-4 text-center">
+                    <div class="text-sm mb-1">星期四</div>
+                    <div class="text-xs opacity-80">Thursday</div>
+                </div>
+                <div class="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold p-4 text-center">
+                    <div class="text-sm mb-1">星期五</div>
+                    <div class="text-xs opacity-80">Friday</div>
+                </div>
+
+                <!-- 上午課程 -->
+                <!-- 第一節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第一節</div>
+                    <div class="text-sm">08:00-08:50</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="1" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="1" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="1" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="1" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="1" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第二節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第二節</div>
+                    <div class="text-sm">09:00-09:50</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="2" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="2" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="2" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="2" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="2" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第三節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第三節</div>
+                    <div class="text-sm">10:10-11:00</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="3" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="3" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="3" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="3" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="3" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第四節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第四節</div>
+                    <div class="text-sm">11:10-12:00</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="4" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="4" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="4" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="4" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="4" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 午休分隔 -->
+                <div class="bg-yellow-200 p-3 text-center font-semibold text-yellow-800">
+                    🍽️ 午休
+                </div>
+                <div class="bg-yellow-100 p-3 text-center text-yellow-700 text-sm">12:00-13:30</div>
+                <div class="bg-yellow-100 p-3 text-center text-yellow-700 text-sm">12:00-13:30</div>
+                <div class="bg-yellow-100 p-3 text-center text-yellow-700 text-sm">12:00-13:30</div>
+                <div class="bg-yellow-100 p-3 text-center text-yellow-700 text-sm">12:00-13:30</div>
+                <div class="bg-yellow-100 p-3 text-center text-yellow-700 text-sm">12:00-13:30</div>
+
+                <!-- 下午課程 -->
+                <!-- 第五節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第五節</div>
+                    <div class="text-sm">13:30-14:20</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="5" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="5" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="5" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="5" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="5" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第六節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第六節</div>
+                    <div class="text-sm">14:30-15:20</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="6" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="6" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="6" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="6" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="6" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第七節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第七節</div>
+                    <div class="text-sm">15:30-16:20</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="7" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="7" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="7" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="7" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="7" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+
+                <!-- 第八節 -->
+                <div class="time-slot text-white p-4 text-center font-semibold">
+                    <div class="text-xs mb-1">第八節</div>
+                    <div class="text-sm">16:30-17:20</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="1" data-period="8" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="2" data-period="8" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="3" data-period="8" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="4" data-period="8" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+                <div class="schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors" data-day="5" data-period="8" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="text-gray-400 text-sm">拖曳課程到這裡</div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- 課程資訊彈窗 -->
+        <div id="subjectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-md mx-4 transform transition-all">
+                <div class="text-center">
+                    <div class="text-3xl mb-4" id="subjectEmoji">📚</div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-2" id="subjectName">科目名稱</h3>
+                    <p class="text-gray-600 mb-1">👨‍🏫 授課老師：<span id="teacherName">老師姓名</span></p>
+                    <p class="text-gray-600 mb-6">📍 上課地點：<span id="classroom">教室位置</span></p>
+                    <button onclick="closeModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let courseIdCounter = 0;
+        
+        // 建立課程
+        function createCourse() {
+            const courseName = document.getElementById('courseName').value.trim();
+            const teacherName = document.getElementById('teacherName').value.trim();
+            const classroom = document.getElementById('classroom').value.trim();
+            
+            if (!courseName || !teacherName || !classroom) {
+                alert('請填寫完整的課程資訊！');
+                return;
+            }
+            
+            const courseBank = document.getElementById('courseBank');
+            const placeholder = courseBank.querySelector('.text-gray-500');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            const courseId = 'course-' + (++courseIdCounter);
+            const courseItem = document.createElement('div');
+            courseItem.className = 'course-item bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-lg shadow-md';
+            courseItem.draggable = true;
+            courseItem.id = courseId;
+            courseItem.innerHTML = `
+                <div class="font-bold text-sm">${courseName}</div>
+                <div class="text-xs opacity-90">${teacherName}</div>
+                <div class="text-xs opacity-80">${classroom}</div>
+                <button onclick="removeCourse('${courseId}')" class="absolute top-1 right-1 text-white hover:text-red-300 text-xs">✕</button>
+            `;
+            courseItem.style.position = 'relative';
+            
+            // 設定拖曳事件
+            courseItem.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    id: courseId,
+                    name: courseName,
+                    teacher: teacherName,
+                    classroom: classroom
+                }));
+            });
+            
+            courseBank.appendChild(courseItem);
+            
+            // 清空輸入欄位
+            document.getElementById('courseName').value = '';
+            document.getElementById('teacherName').value = '';
+            document.getElementById('classroom').value = '';
+            
+            // 自動保存課程庫
+            autoSave();
+        }
+        
+        // 移除課程
+        function removeCourse(courseId) {
+            const courseItem = document.getElementById(courseId);
+            if (courseItem) {
+                courseItem.remove();
+            }
+            
+            // 如果課程庫空了，顯示提示文字
+            const courseBank = document.getElementById('courseBank');
+            if (courseBank.children.length === 0) {
+                courseBank.innerHTML = '<div class="text-gray-500 text-sm">建立課程後會出現在這裡，可拖曳到課表中</div>';
+            }
+        }
+        
+        // 允許拖放
+        function allowDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        
+        // 拖放處理
+        function drop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const courseData = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const cell = e.currentTarget;
+            
+            // 清空原有內容
+            cell.innerHTML = '';
+            
+            // 根據課程名稱選擇顏色
+            const colorClass = getCourseColor(courseData.name);
+            cell.className = `schedule-cell ${colorClass} p-4 text-center cursor-pointer`;
+            
+            // 添加課程內容
+            cell.innerHTML = `
+                <div class="font-bold text-gray-800">${courseData.name}</div>
+                <div class="text-xs text-gray-600 mt-1">${courseData.teacher}</div>
+                <div class="text-xs text-gray-500">${courseData.classroom}</div>
+                <button onclick="clearCell(this)" class="absolute top-1 right-1 text-red-500 hover:text-red-700 text-xs opacity-0 hover:opacity-100 transition-opacity">✕</button>
+            `;
+            cell.style.position = 'relative';
+            
+            // 添加點擊事件
+            cell.onclick = function() {
+                showSubjectInfo(courseData.name, courseData.teacher, courseData.classroom);
+            };
+            
+            // 保存課程資料到格子
+            const day = cell.getAttribute('data-day');
+            const period = cell.getAttribute('data-period');
+            cell.setAttribute('data-course', JSON.stringify(courseData));
+            
+            // 課程庫保留，不移除原課程項目
+            autoSave();
+        }
+        
+        // 根據課程名稱獲取顏色類別
+        function getCourseColor(courseName) {
+            const colorMap = {
+                '計算機概論': 'subject-math',
+                '資料結構': 'subject-english', 
+                '程式設計': 'subject-science',
+                '資料庫': 'subject-history',
+                '網路概論': 'subject-pe',
+                '作業系統': 'subject-art',
+                '軟體工程': 'subject-music',
+                '演算法': 'subject-chinese',
+                '人工智慧': 'subject-math',
+                '機器學習': 'subject-english'
+            };
+            
+            // 如果沒有預設顏色，根據課程名稱的第一個字元決定顏色
+            if (colorMap[courseName]) {
+                return colorMap[courseName];
+            }
+            
+            const colors = ['subject-math', 'subject-english', 'subject-science', 'subject-history', 'subject-pe', 'subject-art', 'subject-music', 'subject-chinese'];
+            const hash = courseName.charCodeAt(0) % colors.length;
+            return colors[hash];
+        }
+        
+        // 清空課表格子
+        function clearCell(button) {
+            const cell = button.parentElement;
+            const day = cell.getAttribute('data-day');
+            const period = cell.getAttribute('data-period');
+            
+            cell.innerHTML = '<div class="text-gray-400 text-sm">拖曳課程到這裡</div>';
+            cell.className = 'schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors';
+            cell.onclick = null;
+            cell.ondrop = drop;
+            cell.ondragover = allowDrop;
+            cell.removeAttribute('data-course');
+            autoSave();
+        }
+        
+        // 自動保存到瀏覽器本地存儲
+        function autoSave() {
+            const scheduleData = {};
+            const courseBankData = [];
+            
+            // 保存課表資料
+            const scheduleCells = document.querySelectorAll('[data-day][data-period]');
+            scheduleCells.forEach(cell => {
+                const day = cell.getAttribute('data-day');
+                const period = cell.getAttribute('data-period');
+                const courseData = cell.getAttribute('data-course');
+                
+                if (courseData) {
+                    scheduleData[`${day}-${period}`] = JSON.parse(courseData);
+                }
+            });
+            
+            // 保存課程庫資料
+            const courseItems = document.querySelectorAll('.course-item');
+            courseItems.forEach(item => {
+                const courseName = item.querySelector('.font-bold').textContent;
+                const teacherName = item.querySelector('.text-xs.opacity-90').textContent;
+                const classroom = item.querySelector('.text-xs.opacity-80').textContent;
+                
+                courseBankData.push({
+                    name: courseName,
+                    teacher: teacherName,
+                    classroom: classroom
+                });
+            });
+            
+            const saveData = {
+                schedule: scheduleData,
+                courseBank: courseBankData,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('npustSchedule', JSON.stringify(saveData));
+        }
+        
+        // 保存課表到檔案
+        function saveSchedule() {
+            const scheduleData = {};
+            const courseBankData = [];
+            
+            // 保存課表資料
+            const scheduleCells = document.querySelectorAll('[data-day][data-period]');
+            scheduleCells.forEach(cell => {
+                const day = cell.getAttribute('data-day');
+                const period = cell.getAttribute('data-period');
+                const courseData = cell.getAttribute('data-course');
+                
+                if (courseData) {
+                    scheduleData[`${day}-${period}`] = JSON.parse(courseData);
+                }
+            });
+            
+            // 保存課程庫資料
+            const courseItems = document.querySelectorAll('.course-item');
+            courseItems.forEach(item => {
+                const courseName = item.querySelector('.font-bold').textContent;
+                const teacherName = item.querySelector('.text-xs.opacity-90').textContent;
+                const classroom = item.querySelector('.text-xs.opacity-80').textContent;
+                
+                courseBankData.push({
+                    name: courseName,
+                    teacher: teacherName,
+                    classroom: classroom
+                });
+            });
+            
+            const saveData = {
+                schedule: scheduleData,
+                courseBank: courseBankData,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 建立下載連結
+            const dataStr = JSON.stringify(saveData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            // 建立下載元素
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `屏科大課表_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // 清理URL
+            URL.revokeObjectURL(url);
+            
+            showMessage('課表已下載到您的電腦！', 'success');
+        }
+        
+        // 載入課表檔案
+        function loadSchedule() {
+            // 建立檔案輸入元素
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.style.display = 'none';
+            
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        loadScheduleData(data);
+                        showMessage('課表載入成功！', 'success');
+                    } catch (error) {
+                        showMessage('檔案格式錯誤，請選擇正確的課表檔案！', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+        }
+        
+        // 載入課表資料
+        function loadScheduleData(data) {
+            // 清空現有課表
+            clearAllSchedule(false);
+            
+            // 載入課程庫
+            const courseBank = document.getElementById('courseBank');
+            courseBank.innerHTML = '';
+            
+            data.courseBank.forEach(course => {
+                const courseId = 'course-' + (++courseIdCounter);
+                const courseItem = document.createElement('div');
+                courseItem.className = 'course-item bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-lg shadow-md';
+                courseItem.draggable = true;
+                courseItem.id = courseId;
+                courseItem.innerHTML = `
+                    <div class="font-bold text-sm">${course.name}</div>
+                    <div class="text-xs opacity-90">${course.teacher}</div>
+                    <div class="text-xs opacity-80">${course.classroom}</div>
+                    <button onclick="removeCourse('${courseId}')" class="absolute top-1 right-1 text-white hover:text-red-300 text-xs">✕</button>
+                `;
+                courseItem.style.position = 'relative';
+                
+                courseItem.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        id: courseId,
+                        name: course.name,
+                        teacher: course.teacher,
+                        classroom: course.classroom
+                    }));
+                });
+                
+                courseBank.appendChild(courseItem);
+            });
+            
+            if (data.courseBank.length === 0) {
+                courseBank.innerHTML = '<div class="text-gray-500 text-sm">建立課程後會出現在這裡，可拖曳到課表中</div>';
+            }
+            
+            // 載入課表資料
+            Object.keys(data.schedule).forEach(key => {
+                const [day, period] = key.split('-');
+                const courseData = data.schedule[key];
+                const cell = document.querySelector(`[data-day="${day}"][data-period="${period}"]`);
+                
+                if (cell) {
+                    cell.innerHTML = '';
+                    const colorClass = getCourseColor(courseData.name);
+                    cell.className = `schedule-cell ${colorClass} p-4 text-center cursor-pointer`;
+                    cell.innerHTML = `
+                        <div class="font-bold text-gray-800">${courseData.name}</div>
+                        <div class="text-xs text-gray-600 mt-1">${courseData.teacher}</div>
+                        <div class="text-xs text-gray-500">${courseData.classroom}</div>
+                        <button onclick="clearCell(this)" class="absolute top-1 right-1 text-red-500 hover:text-red-700 text-xs opacity-0 hover:opacity-100 transition-opacity">✕</button>
+                    `;
+                    cell.style.position = 'relative';
+                    cell.setAttribute('data-course', JSON.stringify(courseData));
+                    
+                    cell.onclick = function() {
+                        showSubjectInfo(courseData.name, courseData.teacher, courseData.classroom);
+                    };
+                }
+            });
+        }
+        
+        // 自動載入瀏覽器本地存儲的課表
+        function autoLoadSchedule() {
+            const savedData = localStorage.getItem('npustSchedule');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    loadScheduleData(data);
+                } catch (error) {
+                    console.log('自動載入失敗');
+                }
+            }
+        }
+        
+        // 清空所有課表
+        function clearAllSchedule(showMsg = true) {
+            const scheduleCells = document.querySelectorAll('[data-day][data-period]');
+            scheduleCells.forEach(cell => {
+                cell.innerHTML = '<div class="text-gray-400 text-sm">拖曳課程到這裡</div>';
+                cell.className = 'schedule-cell bg-gray-100 p-4 text-center border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors';
+                cell.onclick = null;
+                cell.ondrop = drop;
+                cell.ondragover = allowDrop;
+                cell.removeAttribute('data-course');
+            });
+            
+            if (showMsg) {
+                autoSave();
+                showMessage('課表已清空！', 'success');
+            }
+        }
+        
+        // 顯示訊息
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all transform translate-x-full`;
+            
+            if (type === 'success') {
+                messageDiv.className += ' bg-green-500 text-white';
+            } else if (type === 'error') {
+                messageDiv.className += ' bg-red-500 text-white';
+            }
+            
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            // 動畫顯示
+            setTimeout(() => {
+                messageDiv.classList.remove('translate-x-full');
+            }, 100);
+            
+            // 3秒後自動消失
+            setTimeout(() => {
+                messageDiv.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
+        
+        // 頁面載入時自動載入課表
+        window.addEventListener('load', function() {
+            autoLoadSchedule();
+        });
+        
+        // 移除拖放樣式
+        document.addEventListener('dragleave', function(e) {
+            if (e.target.classList.contains('schedule-cell')) {
+                e.target.classList.remove('drag-over');
+            }
+        });
+        
+        function showSubjectInfo(subject, teacher, room) {
+            const modal = document.getElementById('subjectModal');
+            const subjectName = document.getElementById('subjectName');
+            const teacherName = document.getElementById('teacherName');
+            const classroom = document.getElementById('classroom');
+            const subjectEmoji = document.getElementById('subjectEmoji');
+            
+            // 設定科目表情符號
+            const emojiMap = {
+                '計算機概論': '💻',
+                '資料結構': '🗂️',
+                '程式設計': '👨‍💻',
+                '資料庫': '🗄️',
+                '網路概論': '🌐',
+                '作業系統': '⚙️',
+                '軟體工程': '🔧',
+                '演算法': '🧮',
+                '人工智慧': '🤖',
+                '機器學習': '🧠'
+            };
+            
+            subjectEmoji.textContent = emojiMap[subject] || '📚';
+            subjectName.textContent = subject;
+            teacherName.textContent = teacher;
+            classroom.textContent = room;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('subjectModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        // 點擊背景關閉彈窗
+        document.getElementById('subjectModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // Enter鍵建立課程
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && (e.target.id === 'courseName' || e.target.id === 'teacherName' || e.target.id === 'classroom')) {
+                createCourse();
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9869032fa6f4b30a',t:'MTc1OTEyMzAyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
